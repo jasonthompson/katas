@@ -2,6 +2,30 @@
 
 use std::num;
 use std::io::File;
+use std::fmt;
+
+struct Day {
+  date: int,
+  max: f32,
+  min: f32,
+  //temp_spread: f32 
+  }
+
+impl Day {
+  fn new(day: int, min: f32, max: f32) -> Day {
+    Day { date: day,
+          max: max,
+          min: min,
+          //temp_spread: 0.0 
+    }
+  }
+}
+
+impl fmt::Show for Day {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "({}, {}, {})", self.date, self.max, self.min)
+  }
+}
 
 fn sanitize<'a>(unsanitized: &'a str) -> &'a str {
   if unsanitized.ends_with("*") {
@@ -11,17 +35,22 @@ fn sanitize<'a>(unsanitized: &'a str) -> &'a str {
   }
 }
 
-fn to_num(str_num: &str) -> f32 {
-  let f_num: f32 = num::from_str_radix(str_num, 10).unwrap();
-  f_num
-}
+// fn to_num(str_num: &str) -> f32 {
+//   let f_num: f32 = num::from_str_radix(str_num, 10).unwrap();
+//   f_num
+// }
 
-fn parse_line<'a>(line: &'a str) -> Option<Vec<f32>> {
-  if line.is_empty() || !line.char_at(0).is_digit() {
+fn parse_line<'a>(line: &'a str) -> Option<Day> {
+  if line.is_empty() || !line.char_at(3).is_digit() {
     None
   } else {
-    let v: Vec<f32> = line.words().map(|x| to_num(sanitize(x))).collect();
-    Some(v)
+    let l: Vec<&str> = line.words().collect();
+    let date: int = num::from_str_radix(sanitize(l[0]), 10).unwrap();
+    let min: f32 = num::from_str_radix(sanitize(l[1]), 10).unwrap();
+    let max: f32 = num::from_str_radix(sanitize(l[2]), 10).unwrap();
+
+    Some(Day::new( date, max, min ))
+      //map(|x| to_num(sanitize(x))).collect();
   }
 }
 
@@ -31,11 +60,12 @@ fn main() {
   let data = file.read_to_end().unwrap();
   let data_string = String::from_utf8(data);
 
-  for line in data_string.unwrap().as_slice().lines().unwrap() {
+  for line in data_string.unwrap().as_slice().lines() {
     match parse_line(line) {
-      Some(x) => x,
-      None => {}
-    };
+      Some(x) => println!("{}", x),
+      None => () 
+    }
+    //println!("{}", line);
   }
 }
 
@@ -54,9 +84,9 @@ mod tests {
   #[test]
   fn test_parse_line() {
     let line = "4  77    59    68          51.1       0.00         110  9.1 130  12  8.6  62 40 1021.1";
-    let line_vec = vec!(4.0f32, 77.0, 59.0, 68.0, 51.1, 0.00, 110.0, 9.1, 130.0, 12.0, 8.6, 62.0, 40.0, 1021.1);
+    let day = Day::new( 4, 77.0, 59.0 );
 
-    assert_eq!(line_vec, super::parse_line(line).unwrap());
+    assert_eq!(day, super::parse_line(line).unwrap());
     assert_eq!(None, super::parse_line("".as_slice()));
 
     let tricky_line = "26  97*   64";
