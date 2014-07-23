@@ -22,36 +22,47 @@ use std::num;
 use std::io::File;
 use std::fmt;
 
-struct Day {
+pub struct DailyTempSpread {
   date: int,
-  max: f32,
-  min: f32,
-  temp_spread: f32
-  }
+  max: int,
+  min: int,
+  temp_spread: int
+}
 
-impl Day {
-  fn new(day: int, max: f32, min: f32) -> Day {
-    Day { date: day,
-          max: max,
-          min: min,
-          temp_spread: max - min
+impl DailyTempSpread {
+  fn new(day: int, max: int, min: int) -> DailyTempSpread {
+    DailyTempSpread { date: day,
+    max: max,
+    min: min,
+    temp_spread: max - min
     }
   }
 }
 
-impl fmt::Show for Day {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "({}, {:.2f}, {:.2f}, {:.2f})",
-           self.date, self.max, self.min, self.temp_spread)
+impl std::cmp::PartialOrd for DailyTempSpread {
+  fn partial_cmp(&self, other: &DailyTempSpread) -> Option<Ordering> {
+    self.temp_spread.partial_cmp(&other.temp_spread)
   }
 }
 
-// Only implemented in order to run tests. Is this the best way to do this?
-impl std::cmp::PartialEq for Day {
-  fn eq(&self, other: &Day) -> bool {
-    self.date == other.date &&
-    self.min == other.min &&
-    self.max == other.max
+impl fmt::Show for DailyTempSpread {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "({}, {}, {}, {})",
+    self.date, self.max, self.min, self.temp_spread)
+  }
+}
+
+impl Ord for DailyTempSpread {
+  fn cmp(&self, other: &DailyTempSpread) -> Ordering {
+    self.temp_spread.cmp(&other.temp_spread)
+  }
+}
+
+impl Eq for DailyTempSpread {}
+
+impl PartialEq for DailyTempSpread {
+  fn eq(&self, other: &DailyTempSpread) -> bool {
+    self.temp_spread == other.temp_spread
   }
 }
 
@@ -63,17 +74,22 @@ fn sanitize<'a>(unsanitized: &'a str) -> &'a str {
   }
 }
 
-fn parse_line<'a>(line: &'a str) -> Option<Day> {
+pub fn parse_line<'a>(line: &'a str) -> Option<DailyTempSpread> {
   if line.is_empty() || !line.char_at(3).is_digit() {
     None
   } else {
     let l: Vec<&str> = line.words().collect();
     let date: int = num::from_str_radix(sanitize(l[0]), 10).unwrap();
-    let max: f32 = num::from_str_radix(sanitize(l[1]), 10).unwrap();
-    let min: f32 = num::from_str_radix(sanitize(l[2]), 10).unwrap();
+    let max: int = num::from_str_radix(sanitize(l[1]), 10).unwrap();
+    let min: int = num::from_str_radix(sanitize(l[2]), 10).unwrap();
 
-    Some(Day::new( date, max, min ))
+    Some(DailyTempSpread::new( date, max, min ))
   }
+}
+
+fn find_highest_spread(mut days_list: Vec<DailyTempSpread>) -> DailyTempSpread {
+  days_list.sort();
+  days_list.pop().unwrap()
 }
 
 fn main() {
@@ -81,13 +97,17 @@ fn main() {
   let mut file = File::open(&path);
   let data = file.read_to_end().unwrap();
   let data_string = String::from_utf8(data);
+  let mut days: Vec<DailyTempSpread> = Vec::new();
 
   for line in data_string.unwrap().as_slice().lines() {
     match parse_line(line) {
-      Some(x) => println!("{}", x),
+      Some(x) => days.push(x),
       None => ()
     }
   }
+
+  let highest: DailyTempSpread = find_highest_spread(days);
+  println!("June {}: {} degrees", highest.date, highest.temp_spread);
 }
 
 mod tests {
@@ -100,13 +120,13 @@ mod tests {
   #[test]
   fn test_parse_line() {
     let line = "   4  77    59    68          51.1       0.00         110  9.1 130  12  8.6  62 40 1021.1";
-    let day = super::Day::new( 4, 77.0, 59.0);
+    let day = super::DailyTempSpread::new( 4, 77, 59);
 
     assert_eq!(Some(day), super::parse_line(line));
     assert_eq!(None, super::parse_line("".as_slice()));
 
     let tricky_line = "  26  97*   64";
-    let day2 = super::Day::new(26, 97.0, 64.0);
+    let day2 = super::DailyTempSpread::new(26, 97, 64);
     assert_eq!(Some(day2), super::parse_line(tricky_line));
 
     let starts_with_word = "  mo  82.9  60.5  71.7    16  58.8       0.00              6.9          5.3";
