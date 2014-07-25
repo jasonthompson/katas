@@ -1,6 +1,7 @@
 use std::num;
 use std::fmt;
 use std::io::File;
+use std::cmp;
 
 struct ForAgainstSpread {
   team: String,
@@ -15,9 +16,11 @@ impl ForAgainstSpread {
       team: team,
       goals_for: g_for,
       goals_against: g_against,
-      spread: g_for - g_against }
+      spread: num::abs(g_for - g_against) }
   }
 }
+
+impl Eq for ForAgainstSpread {}
 
 impl PartialEq for ForAgainstSpread {
   fn eq(&self, other: &ForAgainstSpread) -> bool {
@@ -29,6 +32,18 @@ impl fmt::Show for ForAgainstSpread {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "({}, {}, {}, {})",
     self.team, self.goals_for, self.goals_against, self.spread)
+  }
+}
+
+impl Ord for ForAgainstSpread {
+  fn cmp(&self, other: &ForAgainstSpread) -> Ordering {
+    self.spread.cmp(&other.spread)
+  }
+}
+
+impl cmp::PartialOrd for ForAgainstSpread {
+  fn partial_cmp(&self, other: &ForAgainstSpread) -> Option<Ordering> {
+    self.spread.partial_cmp(&other.spread)
   }
 }
 
@@ -44,6 +59,11 @@ fn parse_line<'a>(line: &'a str) -> Option<ForAgainstSpread> {
   }
 }
 
+fn find_lowest_spread(mut days_list: Vec<ForAgainstSpread>) -> ForAgainstSpread {
+  days_list.sort();
+  days_list.remove(0).unwrap()
+}
+
 fn main() {
   let path = Path::new("assets/football.dat");
   let mut file = File::open(&path);
@@ -57,6 +77,8 @@ fn main() {
       None => ()
     }
   }
+  let lowest: ForAgainstSpread = find_lowest_spread(games); 
+  println!("{}: point-spread: {}", lowest.team, lowest.spread);
 }
 
 mod tests {
