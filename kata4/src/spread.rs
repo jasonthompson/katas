@@ -1,57 +1,68 @@
-use std::io::File;
-//use std::char;
+// Part Three: DRY Fusion
+//
+// Take the two programs written previously and factor
+// out as much common code as possible, leaving you with two smaller programs
+// and some kind of shared functionality.
+//
+use std::fmt;
+use std::num;
+use std::cmp;
 
-struct Day {
-  date: int,
-  max_temp: f32,
-  min_temp: f32,
-  temp_spread: f32 }
+pub trait Spread<T> {
+  fn spread(&self) -> int {}
+}
 
-impl Day {
-  fn new(data: (int, f32, f32)) -> Day {
-      let (day, max, min) = data;
+enum SpreadType {
+  LOWEST,
+  HIGHEST
+}
 
-    Day { date: day,
-          max_temp: max,
-          min_temp: min,
-          temp_spread: 0.0 }
+impl Eq for Spread {}
+
+impl PartialEq for Box<Spread> {
+  fn eq<'a>(&self, other: &'a Spread) -> bool {
+    self.spread == other.spread
   }
 }
 
-fn sanitize(s: &str) -> &str {
-  if s.ends_with("*") {
-    s.trim_right_chars('*')
+impl Ord for Box<Spread> {
+  fn cmp(&self, other: Box<Spread>) -> Ordering {
+    self.spread.cmp(&other.spread)
   }
 }
 
-
-fn parse_line(line: Vec<&str>) {
-  let v: Vec<&str> = line.words().collect();
-
-  if v.is_empty() || !v[0].char_at(0).is_digit() {
-    return
-  };
-
-  // let day = Day::new(v);
-  println!("{}", v);
+impl cmp::PartialOrd for Box<Spread> {
+  fn partial_cmp(&self, other: Box<Spread>) -> Option<Ordering> {
+    self.spread.partial_cmp(&other.spread)
+  }
 }
 
-// fn main() {
-//   let path = Path::new("assets/weather.dat");
-//   let mut file = File::open(&path);
-//   let data = file.read_to_end().unwrap();
-//   let data_string = String::from_utf8(data);
+fn find_spread(mut list: Box<Spread>, spread_type: SpreadType) -> Box<Spread> {
+  list.sort();
+  match spread_type {
+    LOWEST => list.pop().unwrap(),
+    HIGHEST => list.remove(0).unwrap()
+  }
+}
 
-//   for line in data_string.unwrap().as_slice().lines() {
-//     parse_line(line);
-//   }
-// }
-
-#[config(test)]
 mod tests {
-  use super::sanitize;
+  use std::num;
+
+  struct TestSpread {
+    low: int,
+    high: int
+  }
+
+
+  impl super::Spread for TestSpread {
+    fn spread(&self) -> int {
+      num::abs(self.high - self.low)
+    }
+  }
+
   #[test]
-  fn test_sanitize() {
-    assert_eq!("32".as_slice(), sanitize("32*".as_slice()));
+  fn test_find_spread() {
+    let s = TestSpread { high: 10, low: 4 };
+    assert_eq!(6, s.spread());
   }
 }
